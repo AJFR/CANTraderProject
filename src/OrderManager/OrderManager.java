@@ -5,6 +5,7 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.net.SocketException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.IntSummaryStatistics;
@@ -30,7 +31,9 @@ public class OrderManager {
 		int tryCounter=0;
 		while(!connected&&tryCounter<600){
 			try{
-				return new Socket(location.getHostName(),location.getPort());
+				Socket s=new Socket(location.getHostName(),location.getPort());
+				s.setKeepAlive(true);
+				return s;
 			}catch (IOException e) {
 				Thread.sleep(1000);
 				tryCounter++;
@@ -69,18 +72,22 @@ public class OrderManager {
 				client=this.clients[clientId];
 				if(0<client.getInputStream().available()){ //if we have part of a message ready to read, assuming this doesn't fragment messages
 					ObjectInputStream is=new ObjectInputStream(client.getInputStream()); //create an object inputstream, this is a pretty stupid way of doing it, why not create it once rather than every time around the loop 
-					switch((String)is.readObject()){ //determine the type of message and process it
+					String method=(String)is.readObject();
+					System.out.println(Thread.currentThread().getName()+" calling "+method);
+					switch(method){ //determine the type of message and process it
 						//call the newOrder message with the clientId and the message (clientMessageId,NewOrderSingle)
 						case "newOrderSingle": newOrder(clientId, is.readInt(), (NewOrderSingle)is.readObject());break;
 						//TODO create a default case which errors with "Unknown message type"+...
 					}
 				}
 			}
-			for(routerId=0;routerId<this.clients.length;routerId++){ //check if we have data on any of the sockets
+			for(routerId=0;routerId<this.orderRouters.length;routerId++){ //check if we have data on any of the sockets
 				router=this.orderRouters[routerId];
 				if(0<router.getInputStream().available()){ //if we have part of a message ready to read, assuming this doesn't fragment messages
 					ObjectInputStream is=new ObjectInputStream(router.getInputStream()); //create an object inputstream, this is a pretty stupid way of doing it, why not create it once rather than every time around the loop
-					switch((String)is.readObject()){ //determine the type of message and process it
+					String method=(String)is.readObject();
+					System.out.println(Thread.currentThread().getName()+" calling "+method);
+					switch(method){ //determine the type of message and process it
 						case "bestPrice":int OrderId=is.readInt();
 							int SliceId=is.readInt();
 							Order slice=orders.get(OrderId).slices.get(SliceId);
@@ -93,9 +100,12 @@ public class OrderManager {
 					}
 				}
 			}
+			
 			if(0<this.trader.getInputStream().available()){
 				ObjectInputStream is=new ObjectInputStream(this.trader.getInputStream());
-				switch((String)is.readObject()){
+				String method=(String)is.readObject();
+				System.out.println(Thread.currentThread().getName()+" calling "+method);
+				switch(method){
 					case "acceptOrder":acceptOrder(is.readInt());break;
 					case "sliceOrder":sliceOrder(is.readInt(), is.readInt());
 				}
@@ -108,7 +118,7 @@ public class OrderManager {
 		ObjectOutputStream os=new ObjectOutputStream(clients[clientId].getOutputStream());
 		//newOrderSingle acknowledgement
 		//ClOrdId is 11=
-		os.writeObject("11="+clientOrderId+";35=D;39=A;");
+		os.writeObject("11="+clientOrderId+";35=A;39=A;");
 		os.flush();
 		sendOrderToTrader(id,orders.get(id),TradeScreen.api.newOrder);
 		//send the new order to the trading screen
@@ -129,7 +139,13 @@ public class OrderManager {
 			return;
 		}
 		o.OrdStatus='0'; //New
-		price(o);
+		ObjectOutputStream os=new ObjectOutputStream(clients[o.clientid].getOutputStream());
+		//newOrderSingle acknowledgement
+		//ClOrdId is 11=
+		os.writeObject("11="+o.ClientOrderID+";35=A;39=0");
+		os.flush();
+
+		price(id,o);
 	}
 	public void sliceOrder(int id,int sliceSize) throws IOException{
 		Order o=orders.get(id);
@@ -140,10 +156,11 @@ public class OrderManager {
 			return;
 		}
 		int sliceId=o.newSlice(sliceSize);
-		internalCross(id,o);
+		Order slice=o.slices.get(sliceId);
+		internalCross(id,slice);
 		int sizeRemaining=o.slices.get(sliceId).sizeRemaining();
 		if(sizeRemaining>0){
-			routeOrder(id,sliceId,sizeRemaining,o);
+			routeOrder(id,sliceId,sizeRemaining,slice);
 		}
 	}
 	private void internalCross(int id, Order o) throws IOException{
@@ -206,7 +223,7 @@ public class OrderManager {
 		//orderRouter.sendCancel(order);
 		//order.orderRouter.writeObject(order);
 	}
-	private void price(Order o) throws IOException{
+	private void price(int id,Order o) throws IOException{
 		liveMarketData.setPrice(o);
 		sendOrderToTrader(id, o, TradeScreen.api.price);
 	}
