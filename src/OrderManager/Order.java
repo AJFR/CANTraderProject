@@ -34,7 +34,7 @@ public class Order implements Serializable{
 	public int sizeRemaining(){
 		return size-sizeFilled();
 	}
-	String clientid;
+	int clientid;
 	public Instrument instrument;
 	public double initialMarketPrice;
 	ArrayList<Order>slices;
@@ -120,10 +120,9 @@ public class Order implements Serializable{
 		//state=cancelled
 	}
 	public Order(int clientId, int ClientOrderID, Instrument instrument, int size){
-		this.id=id;
 		this.ClientOrderID=ClientOrderID;
 		this.size=size;
-		this.clientid=clientid;
+		this.clientid=clientId;
 		this.instrument=instrument;
 		fills=new ArrayList<Fill>();
 		slices=new ArrayList<Order>();
@@ -134,7 +133,7 @@ class Basket{
 	Order[] orders;
 }
 
-class Fill{
+class Fill implements Serializable{
 	//long id;
 	int size;
 	double price;
