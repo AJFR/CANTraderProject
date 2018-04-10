@@ -19,6 +19,7 @@ import OrderRouter.Router.api;
 import TradeScreen.TradeScreen;
 
 public class OrderManager {
+
 	private static LiveMarketData liveMarketData;
 	private HashMap<Integer,Order> orders=new HashMap<Integer,Order>(); //debugger will do this line as it gives state to the object
 	//currently recording the number of new order messages we get. TODO why? use it for more?

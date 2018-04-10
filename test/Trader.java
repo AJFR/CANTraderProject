@@ -39,7 +39,7 @@ public class Trader extends Thread implements TradeScreen{
 						case fill:is.readInt();is.readObject();break; //TODO
 					}
 				}else{
-					//System.out.println("Trader Waiting for data to be available - sleep 1s");
+					System.out.println("Trader Waiting for data to be available - sleep 1s");
 					Thread.sleep(1000);
 				}
 			}
