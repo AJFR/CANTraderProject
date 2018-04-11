@@ -96,7 +96,8 @@ public class OrderManager {
 					String method=(String)objectInputStream.readObject();
 					System.out.println(Thread.currentThread().getName()+" calling "+method);
 					switch(method){ //determine the type of message and process it
-						case "bestPrice":int OrderId=objectInputStream.readInt();
+						case "bestPrice":
+							int OrderId=objectInputStream.readInt();
 							int SliceId=objectInputStream.readInt();
 							Order slice=orders.get(OrderId).slices.get(SliceId);
 							slice.bestPrices[routerId]=objectInputStream.readDouble();
@@ -104,7 +105,8 @@ public class OrderManager {
 							if(slice.bestPriceCount==slice.bestPrices.length)
 								reallyRouteOrder(SliceId, slice);
 							break;
-						case "newFill":newFill(objectInputStream.readInt(),objectInputStream.readInt(),objectInputStream.readInt(),objectInputStream.readDouble());break;
+						case "newFill":
+							newFill(objectInputStream.readInt(),objectInputStream.readInt(),objectInputStream.readInt(),objectInputStream.readDouble());break;
 					}
 				}
 			}
@@ -115,7 +117,8 @@ public class OrderManager {
 				System.out.println(Thread.currentThread().getName()+" calling "+method);
 				switch(method){
 					case "acceptOrder":
-						acceptOrder(objectInputStream.readInt());break;
+						acceptOrder(objectInputStream.readInt());
+						break;
 					case "sliceOrder":
 						sliceOrder(objectInputStream.readInt(), objectInputStream.readInt());
 				}
