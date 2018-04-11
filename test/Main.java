@@ -28,6 +28,3 @@ public class Main{
 		(new MockOM("Order Manager",routers,clients,trader,liveMarketData)).start();
 	}
 }
-
-
-
