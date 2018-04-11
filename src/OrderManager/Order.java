@@ -27,6 +27,7 @@ public class Order implements Serializable{
 		}
 		return totalSizeOfSlices;
 	}
+
 	public int newSlice(int sliceSize){
 		slices.add(new Order(id,clientOrderID,instrument,sliceSize));
 		return slices.size()-1;
@@ -79,11 +80,12 @@ public class Order implements Serializable{
 				if(sliceSizeRemaining<=matchingSliceSizeRemaining){
 					slice.createFill(sliceSizeRemaining,initialMarketPrice);
 					matchingSlice.createFill(sliceSizeRemaining, initialMarketPrice);
+					break;
 				}
-				else {//sliceSizeRemaining>matchingSliceSizeRemaining
+				//else {//sliceSizeRemaining>matchingSliceSizeRemaining
 					slice.createFill(matchingSliceSizeRemaining, initialMarketPrice);
 					matchingSlice.createFill(matchingSliceSizeRemaining, initialMarketPrice);
-				}
+				//}
 			}
 			int sliceSizeRemaining=slice.sizeRemaining();
 			int mParent=matchingOrder.sizeRemaining()-matchingOrder.sliceSizes();
@@ -91,6 +93,7 @@ public class Order implements Serializable{
 				if(sliceSizeRemaining>=mParent){
 					slice.createFill(sliceSizeRemaining,initialMarketPrice);
 					matchingOrder.createFill(sliceSizeRemaining, initialMarketPrice);
+
 				}else{
 					slice.createFill(mParent,initialMarketPrice);
 					matchingOrder.createFill(mParent, initialMarketPrice);
@@ -111,10 +114,11 @@ public class Order implements Serializable{
 				if(sliceSizeRemaining<=matchingSliceSizeRemaining){
 					 createFill(sliceSizeRemaining,initialMarketPrice);
 					 matchingSlice.createFill(sliceSizeRemaining, initialMarketPrice);
-				} else {//sliceSizeRemaining>matchingSliceSizeRemaining
+					 break;
+				} //else {//sliceSizeRemaining>matchingSliceSizeRemaining
 					createFill(matchingSliceSizeRemaining, initialMarketPrice);
 					matchingSlice.createFill(matchingSliceSizeRemaining, initialMarketPrice);
-				}
+				//}
 			}
 			int sliceSizeRemaining=sizeRemaining();
 			int mParent=matchingOrder.sizeRemaining()-matchingOrder.sliceSizes();

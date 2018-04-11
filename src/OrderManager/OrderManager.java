@@ -27,6 +27,7 @@ public class OrderManager {
 	private Socket[] orderRouters; //debugger will skip these lines as they dissapear at compile time into 'the object'/stack
 	private Socket[] clients;
 	private Socket trader;
+
 	private Socket connect(InetSocketAddress location) throws InterruptedException{
 		boolean connected=false;
 		int tryCounter=0;
@@ -37,16 +38,19 @@ public class OrderManager {
 				return s;
 			}catch (IOException e) {
 				Thread.sleep(1000);
+				System.out.println("socket not connected, counter increasing");
 				tryCounter++;
 			}
 		}
 		System.out.println("Failed to connect to "+location.toString());
 		return null;
 	}
+
 	//@param args the command line arguments
 	public OrderManager(InetSocketAddress[] orderRouters, InetSocketAddress[] clients,InetSocketAddress trader,LiveMarketData liveMarketData)throws IOException, ClassNotFoundException, InterruptedException{
 		this.liveMarketData=liveMarketData;
 		this.trader=connect(trader);
+		//ObjectOutputStream objectOutputStream=new ObjectOutputStream(this.trader.getOutputStream());
 		//for the router connections, copy the input array into our object field.
 		//but rather than taking the address we create a socket+ephemeral port and connect it to the address
 		this.orderRouters=new Socket[orderRouters.length];
@@ -65,7 +69,7 @@ public class OrderManager {
 		}
 		int clientId,routerId;
 		Socket client,router;
-		ObjectInputStream objectInputStream=new ObjectInputStream(this.trader.getInputStream());
+		//System.out.println("Reading input stream here "+objectInputStream.read());
 		//main loop, wait for a message, then process it
 		while(true){
 			//TODO this is pretty cpu intensive, use a more modern polling/interrupt/select approach
@@ -73,6 +77,8 @@ public class OrderManager {
 			for(clientId=0;clientId<this.clients.length;clientId++){ //check if we have data on any of the sockets
 				client=this.clients[clientId];
 				if(client.getInputStream().available()>0){ //if we have part of a message ready to read, assuming this doesn't fragment messages
+					//ObjectInputStream objectInputStream=new ObjectInputStream(this.trader.getInputStream());
+					ObjectInputStream objectInputStream=new ObjectInputStream(client.getInputStream());
 					String method=(String)objectInputStream.readObject();
 					System.out.println(Thread.currentThread().getName()+" calling "+method);
 					switch(method){ //determine the type of message and process it
@@ -86,6 +92,7 @@ public class OrderManager {
 			for(routerId=0;routerId<this.orderRouters.length;routerId++){ //check if we have data on any of the sockets
 				router=this.orderRouters[routerId];
 				if(0<router.getInputStream().available()){ //if we have part of a message ready to read, assuming this doesn't fragment messages
+					ObjectInputStream objectInputStream=new ObjectInputStream(router.getInputStream());
 					String method=(String)objectInputStream.readObject();
 					System.out.println(Thread.currentThread().getName()+" calling "+method);
 					switch(method){ //determine the type of message and process it
@@ -103,6 +110,7 @@ public class OrderManager {
 			}
 
 			if(0<this.trader.getInputStream().available()){
+				ObjectInputStream objectInputStream=new ObjectInputStream(this.trader.getInputStream());
 				String method=(String)objectInputStream.readObject();
 				System.out.println(Thread.currentThread().getName()+" calling "+method);
 				switch(method){
