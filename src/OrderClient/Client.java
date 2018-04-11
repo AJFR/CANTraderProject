@@ -5,8 +5,9 @@ import java.io.IOException;
 import OrderManager.Order;
 
 public interface Client{
+
 	//Outgoing messages
-	int sendOrder(Object par0)throws IOException;
+	int sendOrder(Object par0) throws IOException;
 	void sendCancel(int id);
 	
 	//Incoming messages
