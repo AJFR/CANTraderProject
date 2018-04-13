@@ -141,12 +141,14 @@ public class OrderManager {
 
 		ObjectOutputStream objectOutputStream=new ObjectOutputStream(clients[o.clientOrderID].getOutputStream());
 		objectOutputStream.writeObject("11="+o.clientOrderID+";35=Z;39=2;");
+		objectOutputStream.writeObject(o);
 		objectOutputStream.flush();
 	}
 
 	private void partiallyFilledOrder(Order o) throws IOException {
 		ObjectOutputStream objectOutputStream=new ObjectOutputStream(clients[o.clientOrderID].getOutputStream());
 		objectOutputStream.writeObject("11="+o.clientOrderID+";35=Z;39=1;");
+		objectOutputStream.writeObject(o);
 		objectOutputStream.flush();
 	}
 
@@ -189,7 +191,9 @@ public class OrderManager {
 		Order o=orders.get(id);
 		//slice the order. We have to check this is a valid size.
 		//Order has a list of slices, and a list of fills, each slice is a childorder and each fill is associated with either a child order or the original order
-		if(sliceSize>o.sizeRemaining()-o.sliceSizes()){
+//		if(sliceSize>o.sizeRemaining()-o.sliceSizes())
+		if(sliceSize>o.sizeRemaining())
+		{
 			System.out.println("error sliceSize is bigger than remaining size to be filled on the order");
 			return;
 		}
