@@ -50,7 +50,6 @@ public class SampleClient extends Mock implements Client{
 		OUT_QUEUE.put(messageID,nos);
 
 		if(OrderManagerConnection.isConnected()){
-			System.out.println("####");
 			ObjectOutputStream os=new ObjectOutputStream(OrderManagerConnection.getOutputStream());
 			os.writeObject("newOrderSingle");
 //			try {
@@ -113,35 +112,36 @@ public class SampleClient extends Mock implements Client{
 					int OrdStatus;
 					methods whatToDo = methods.dontKnow;
 					//String[][] fixTagsValues=new String[fixTags.length][2];
-					for( int i=0 ; i < fixTags.length ; i++ )
-					{
-						String[] tag_value = fixTags[i].split("=");
-						switch(tag_value[0]){
-							case"11":
-								OrderId = Integer.parseInt(tag_value[1]);
-								break;
-							case"35":
-								MsgType = tag_value[1].charAt(0);
-								if(MsgType=='A')
-									whatToDo = methods.newOrderSingleAcknowledgement;
-								break;
-							case"39":
-								OrdStatus = tag_value[1].charAt(0);
-								break;
+
+						for( int i=0 ; i < fixTags.length ; i++ )
+						{
+							String[] tag_value = fixTags[i].split("=");
+							switch(tag_value[0]){
+								case"11":
+									OrderId = Integer.parseInt(tag_value[1]);
+									break;
+								case"35":
+									MsgType = tag_value[1].charAt(0);
+									if(MsgType=='A')
+										whatToDo = methods.newOrderSingleAcknowledgement;
+									break;
+								case"39":
+									OrdStatus = tag_value[1].charAt(0);
+									//Order message=(Order) inputStream.readObject();
+									switch(OrdStatus){
+										case '4':cancelled(null);break;
+										case '1':partialFill(null);break;
+										case '2':fullyFilled(null);
+									}
+
+									break;
+							}
 						}
-					}
-					switch(whatToDo){
-						case newOrderSingleAcknowledgement:
-							newOrderSingleAcknowledgement(OrderId);
-					}
-					
-					/*message=connection.getMessage();
-					char type;
-					switch(type){
-						case 'C':cancelled(message);break;
-						case 'P':partialFill(message);break;
-						case 'F':fullyFilled(message);
-					}*/
+						switch(whatToDo){
+							case newOrderSingleAcknowledgement:
+								newOrderSingleAcknowledgement(OrderId);
+						}
+
 //					show("");		// this outputs the line: Client 1:
 				}
 			}

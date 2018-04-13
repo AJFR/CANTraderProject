@@ -47,8 +47,10 @@ public class Trader extends Thread implements TradeScreen {
                             objectInputStream.readObject();
                             break; //TODO
                         case fill:
-                            objectInputStream.readInt();
-                            objectInputStream.readObject();
+                            System.out.println("Trader asked to fill");
+                            fill(objectInputStream.readInt(),(Order)objectInputStream.readObject());
+                            //objectInputStream.readInt();
+                            //objectInputStream.readObject();
                             break; //TODO
                     }
                 } else {
@@ -93,6 +95,27 @@ public class Trader extends Thread implements TradeScreen {
         //TODO should update the trade screen
         Thread.sleep(2134);
         sliceOrder(id, orders.get(id).sizeRemaining() / 2);
-        System.out.println("Order Sliced");
+    }
+
+    public void fill(int id, Order o) throws InterruptedException, IOException{
+        System.out.println("order to string: "+o.toString());
+        System.out.println("---------------");
+        System.out.println("order id:-"+id);
+        System.out.println("o.sizeRemaining: "+o.sizeRemaining());
+        System.out.println("o.sliceSizes: "+o.sliceSizes());
+        System.out.println("o.sizeFilled: "+o.sizeFilled());
+        System.out.println("---------------");
+        if(o.sizeRemaining() > 0){
+            sliceOrder(id,orders.get(id).sizeRemaining() / 2); //the order of this may provide problems, move to bottom of method?
+            objectOutputStream = new ObjectOutputStream(orderManagerConnection.getOutputStream());
+            objectOutputStream.writeObject("partiallyFilledOrder");
+            objectOutputStream.writeObject(o);
+            objectOutputStream.flush();
+        }else{
+            objectOutputStream = new ObjectOutputStream(orderManagerConnection.getOutputStream());
+            objectOutputStream.writeObject("filledOrder");
+            objectOutputStream.writeObject(o);
+            objectOutputStream.flush();
+        }
     }
 }

@@ -121,9 +121,30 @@ public class OrderManager {
 						break;
 					case "sliceOrder":
 						sliceOrder(objectInputStream.readInt(), objectInputStream.readInt());
+						break;
+					case "filledOrder":
+						filledOrder((Order) objectInputStream.readObject());
+						break;
+					case "partiallyFilledOrder":
+						partiallyFilledOrder((Order) objectInputStream.readObject());
+						break;
 				}
 			}
 		}
+	}
+
+	private void filledOrder(Order o) throws IOException {
+		//closing messaging sockets etc..
+
+		ObjectOutputStream objectOutputStream=new ObjectOutputStream(clients[o.clientOrderID].getOutputStream());
+		objectOutputStream.writeObject("11="+o.clientOrderID+";35=Z;39=2;");
+		objectOutputStream.flush();
+	}
+
+	private void partiallyFilledOrder(Order o) throws IOException {
+		ObjectOutputStream objectOutputStream=new ObjectOutputStream(clients[o.clientOrderID].getOutputStream());
+		objectOutputStream.writeObject("11="+o.clientOrderID+";35=Z;39=1;");
+		objectOutputStream.flush();
 	}
 
 	private void newOrder(int clientId, int clientOrderId, NewOrderSingle nos) throws IOException{
@@ -161,7 +182,7 @@ public class OrderManager {
 
 		price(id,o);
 	}
-	public void sliceOrder(int id,int sliceSize) throws IOException{
+	private void sliceOrder(int id,int sliceSize) throws IOException{
 		Order o=orders.get(id);
 		//slice the order. We have to check this is a valid size.
 		//Order has a list of slices, and a list of fills, each slice is a childorder and each fill is associated with either a child order or the original order
@@ -179,7 +200,7 @@ public class OrderManager {
 	}
 	private void internalCross(int id, Order o) throws IOException{
 		for(Map.Entry<Integer, Order>entry:orders.entrySet()){
-			if(entry.getKey().intValue()==id)continue;
+			if(entry.getKey()==id)continue;
 			Order matchingOrder=entry.getValue();
 			if(!(matchingOrder.instrument.equals(o.instrument)&&matchingOrder.initialMarketPrice==o.initialMarketPrice))continue;
 			//TODO add support here and in Order for limit orders
