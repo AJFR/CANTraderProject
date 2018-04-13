@@ -102,11 +102,14 @@ public class OrderManager {
 							Order slice=orders.get(OrderId).slices.get(SliceId);
 							slice.bestPrices[routerId]=objectInputStream.readDouble();
 							slice.bestPriceCount+=1;
-							if(slice.bestPriceCount==slice.bestPrices.length)
+							System.out.println("bestPriceCount: "+slice.bestPriceCount+" bestPriceLength: "+slice.bestPrices.length);
+							if(slice.bestPriceCount==slice.bestPrices.length-1) {	// ALEX/CASSY added the: -1 after the bestPrice.length
 								reallyRouteOrder(SliceId, slice);
+							}
 							break;
 						case "newFill":
-							newFill(objectInputStream.readInt(),objectInputStream.readInt(),objectInputStream.readInt(),objectInputStream.readDouble());break;
+							newFill(objectInputStream.readInt(),objectInputStream.readInt(),objectInputStream.readInt(),objectInputStream.readDouble());
+							break;
 					}
 				}
 			}
@@ -196,8 +199,10 @@ public class OrderManager {
 	private void newFill(int id,int sliceId,int size,double price) throws IOException{
 		Order o=orders.get(id);
 		o.slices.get(sliceId).createFill(size, price);
+		System.out.println("(OrderManager) Size of fill: "+size);
 		if(o.sizeRemaining()==0){
 			Database.write(o);
+			//Final Fill Tell Client order has been filled/completed
 		}
 		sendOrderToTrader(id, o, TradeScreen.orderRequest.fill);
 	}
@@ -209,6 +214,8 @@ public class OrderManager {
 			os.writeInt(sliceId);
 			os.writeObject(order.instrument);
 			os.writeInt(order.sizeRemaining());
+			os.writeInt(r.getLocalPort());
+			os.writeInt(r.getPort());
 			os.flush();
 		}
 		//need to wait for these prices to come back before routing
@@ -231,6 +238,7 @@ public class OrderManager {
 		os.writeInt(sliceId);
 		os.writeInt(o.sizeRemaining());
 		os.writeObject(o.instrument);
+		System.out.println("ReallyRouteOrder in OrderManager");
 		os.flush();
 	}
 	private void sendCancel(Order order,Router orderRouter){
