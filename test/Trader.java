@@ -94,7 +94,14 @@ public class Trader extends Thread implements TradeScreen {
     public void price(int id, Order o) throws InterruptedException, IOException {
         //TODO should update the trade screen
         Thread.sleep(2134);
-        sliceOrder(id, orders.get(id).sizeRemaining() / 2);
+        System.out.println("Order ID: "+id+" Size Remaining: "+o.sizeRemaining()+" Size Filled: "+o.sizeFilled()+" Slice Size: "+o.sliceSizes());
+        int sliceSize = 1000;
+        if(sliceSize> orders.get(id).sizeRemaining()) {
+            sliceSize = orders.get(id).sizeRemaining();
+        }
+        System.out.println("(Trader Price) Slice Size: " + sliceSize);
+        sliceOrder(id, sliceSize);
+//        sliceOrder(id, orders.get(id).sizeRemaining()/4);
     }
 
     public void fill(int id, Order o) throws InterruptedException, IOException{
@@ -106,7 +113,14 @@ public class Trader extends Thread implements TradeScreen {
         System.out.println("o.sizeFilled: "+o.sizeFilled());
         System.out.println("---------------");
         if(o.sizeRemaining() > 0){
-            sliceOrder(id,orders.get(id).sizeRemaining() / 2); //the order of this may provide problems, move to bottom of method?
+            System.out.println("Size Remaining: "+o.sizeRemaining()+" Size Filled: "+o.sizeFilled()+" Slice Size: "+o.sliceSizes());
+            int sliceSize = 1000;
+            if(sliceSize> o.sizeRemaining()) {
+                sliceSize = o.sizeRemaining();
+            }
+            System.out.println("(Trader Fill) Slice Size: " + sliceSize);
+            sliceOrder(id,sliceSize);
+//            sliceOrder(id,orders.get(id).sizeRemaining()); //the order of this may provide problems, move to bottom of method?
             objectOutputStream = new ObjectOutputStream(orderManagerConnection.getOutputStream());
             objectOutputStream.writeObject("partiallyFilledOrder");
             objectOutputStream.writeObject(o);
