@@ -41,6 +41,7 @@ public class SampleClient extends Mock implements Client{
 	public int sendOrder(Object par0) throws IOException{
 		//defining instrument with a randomNoGenerator
 		int size=RANDOM_NUM_GENERATOR.nextInt(5000);
+		System.out.println("(SampleClient) Order size: "+size);
 		// CASSY: renamed instid to instrumentID
 		int instrumentID = RANDOM_NUM_GENERATOR.nextInt(3);
 		Instrument instrument = INSTRUMENTS[RANDOM_NUM_GENERATOR.nextInt(INSTRUMENTS.length)];

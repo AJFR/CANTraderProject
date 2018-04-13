@@ -33,9 +33,20 @@ public class SampleRouter extends Thread implements Router{
 					System.out.println("Order Router received method call for:"+methodName);
 					switch(methodName){
 						case routeOrder:
+							System.out.println("We are in routeOrder in SampleRouter");
 							routeOrder(objectInputStream.readInt(),objectInputStream.readInt(),objectInputStream.readInt(),(Instrument)objectInputStream.readObject());break;
 						case priceAtSize:
-							priceAtSize(objectInputStream.readInt(),objectInputStream.readInt(),(Instrument)objectInputStream.readObject(),objectInputStream.readInt());break;
+							int id = objectInputStream.readInt();
+							int sliceID = objectInputStream.readInt();
+							Object instru = objectInputStream.readObject();
+							int sizeRemaining = objectInputStream.readInt();
+							int routerLocalPort = objectInputStream.readInt();
+							int routerPort = objectInputStream.readInt();
+							System.out.println("ID: "+id+" sliceID: "+sliceID+" RIC: "+instru.toString()+" Size Remaining: "+sizeRemaining+" Router Port: "+routerPort+" and LocalPort "+routerLocalPort);
+//							priceAtSize(objectInputStream.readInt(),objectInputStream.readInt(),(Instrument)objectInputStream.readObject(),objectInputStream.readInt());break;
+							priceAtSize(id,sliceID,(Instrument) instru,sizeRemaining);
+							break;
+
 					}
 				}else{
 					Thread.sleep(100);
@@ -48,9 +59,11 @@ public class SampleRouter extends Thread implements Router{
 	}
 	@Override
 	public void routeOrder(int id,int sliceId,int size,Instrument i) throws IOException, InterruptedException{ //MockI.show(""+order);
-		int fillSize=RANDOM_NUM_GENERATOR.nextInt(size);
+//		int fillSize=RANDOM_NUM_GENERATOR.nextInt(size);
+		int fillSize=size;
 		//TODO have this similar to the market price of the instrument
 		double fillPrice=199*RANDOM_NUM_GENERATOR.nextDouble();
+		System.out.println("Fill Price: "+fillPrice);
 		Thread.sleep(42);
 		objectOutputStream=new ObjectOutputStream(objectManagerConnection.getOutputStream());
 		objectOutputStream.writeObject("newFill");
