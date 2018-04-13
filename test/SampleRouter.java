@@ -33,7 +33,7 @@ public class SampleRouter extends Thread implements Router{
 					System.out.println("Order Router received method call for:"+methodName);
 					switch(methodName){
 						case routeOrder:
-							System.out.println("We are in routeOrder in SampleRouter");
+//							System.out.println("We are in routeOrder in SampleRouter");
 							routeOrder(objectInputStream.readInt(),objectInputStream.readInt(),objectInputStream.readInt(),(Instrument)objectInputStream.readObject());break;
 						case priceAtSize:
 							int id = objectInputStream.readInt();
@@ -42,7 +42,7 @@ public class SampleRouter extends Thread implements Router{
 							int sizeRemaining = objectInputStream.readInt();
 							int routerLocalPort = objectInputStream.readInt();
 							int routerPort = objectInputStream.readInt();
-							System.out.println("ID: "+id+" sliceID: "+sliceID+" RIC: "+instru.toString()+" Size Remaining: "+sizeRemaining+" Router Port: "+routerPort+" and LocalPort "+routerLocalPort);
+							System.out.println("ID: "+id+" RIC: "+instru.toString()+" Router Port: "+routerPort+" and LocalPort "+routerLocalPort);
 //							priceAtSize(objectInputStream.readInt(),objectInputStream.readInt(),(Instrument)objectInputStream.readObject(),objectInputStream.readInt());break;
 							priceAtSize(id,sliceID,(Instrument) instru,sizeRemaining);
 							break;
@@ -59,8 +59,10 @@ public class SampleRouter extends Thread implements Router{
 	}
 	@Override
 	public void routeOrder(int id,int sliceId,int size,Instrument i) throws IOException, InterruptedException{ //MockI.show(""+order);
-//		int fillSize=RANDOM_NUM_GENERATOR.nextInt(size);
-		int fillSize=size;
+		int fillSize=(RANDOM_NUM_GENERATOR.nextInt(size))+51;
+//		int fillSize = (int) (50+(Math.random()*(size - 50)));
+		System.out.println("(routeOrder) Size of slice: "+size+" and fillSize: "+fillSize);
+//		int fillSize=size;
 		//TODO have this similar to the market price of the instrument
 		double fillPrice=199*RANDOM_NUM_GENERATOR.nextDouble();
 		System.out.println("Fill Price: "+fillPrice);

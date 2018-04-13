@@ -71,25 +71,27 @@ public class OrderManager {
 		Socket client,router;
 		//System.out.println("Reading input stream here "+objectInputStream.read());
 		//main loop, wait for a message, then process it
-		while(true){
-			//TODO this is pretty cpu intensive, use a more modern polling/interrupt/select approach
-			//we want to use the arrayindex as the clientId, so use traditional for loop instead of foreach
-			for(clientId=0;clientId<this.clients.length;clientId++){ //check if we have data on any of the sockets
-				client=this.clients[clientId];
-				if(client.getInputStream().available()>0){ //if we have part of a message ready to read, assuming this doesn't fragment messages
-					//ObjectInputStream objectInputStream=new ObjectInputStream(this.trader.getInputStream());
-					ObjectInputStream objectInputStream=new ObjectInputStream(client.getInputStream());
-					String method=(String)objectInputStream.readObject();
-					System.out.println(Thread.currentThread().getName()+" calling "+method);
-					switch(method){ //determine the type of message and process it
-						//call the newOrder message with the clientId and the message (clientMessageId,NewOrderSingle)
-						case "newOrderSingle":
-							newOrder(clientId, objectInputStream.readInt(), (NewOrderSingle)objectInputStream.readObject());break;
-						//TODO create a default case which errors with "Unknown message type"+...
-					}
-				}
-			}
-			for(routerId=0;routerId<this.orderRouters.length;routerId++){ //check if we have data on any of the sockets
+		while(true) {
+            //TODO this is pretty cpu intensive, use a more modern polling/interrupt/select approach
+            //we want to use the arrayindex as the clientId, so use traditional for loop instead of foreach
+            for (clientId = 0; clientId < this.clients.length; clientId++) { //check if we have data on any of the sockets
+                client = this.clients[clientId];
+                    if (client.getInputStream().available() > 0) { //if we have part of a message ready to read, assuming this doesn't fragment messages
+                        //ObjectInputStream objectInputStream=new ObjectInputStream(this.trader.getInputStream());
+                        ObjectInputStream objectInputStream = new ObjectInputStream(client.getInputStream());
+                        String method = (String) objectInputStream.readObject();
+                        System.out.println(Thread.currentThread().getName() + " calling " + method);
+                        switch (method) { //determine the type of message and process it
+                            //call the newOrder message with the clientId and the message (clientMessageId,NewOrderSingle)
+                            case "newOrderSingle":
+                                newOrder(clientId, objectInputStream.readInt(), (NewOrderSingle) objectInputStream.readObject());
+                                break;
+                            //TODO create a default case which errors with "Unknown message type"+...
+                        }
+                    }
+            }
+
+            for(routerId=0;routerId<this.orderRouters.length;routerId++){ //check if we have data on any of the sockets
 				router=this.orderRouters[routerId];
 				if(0<router.getInputStream().available()){ //if we have part of a message ready to read, assuming this doesn't fragment messages
 					ObjectInputStream objectInputStream=new ObjectInputStream(router.getInputStream());
@@ -143,6 +145,11 @@ public class OrderManager {
 		objectOutputStream.writeObject("11="+o.clientOrderID+";35=Z;39=2;");
 		objectOutputStream.writeObject(o);
 		objectOutputStream.flush();
+//        try {
+//            clients[o.clientOrderID].close();
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        }
 	}
 
 	private void partiallyFilledOrder(Order o) throws IOException {
@@ -197,13 +204,29 @@ public class OrderManager {
 			System.out.println("error sliceSize is bigger than remaining size to be filled on the order");
 			return;
 		}
-		int sliceId=o.newSlice(sliceSize);
-		Order slice=o.slices.get(sliceId);
-		internalCross(id,slice);
-		int sizeRemaining=o.slices.get(sliceId).sizeRemaining();
-		if(sizeRemaining>0){
-			routeOrder(id,sliceId,sizeRemaining,slice);
-		}
+		Order partiallyFilledSlice = null;
+		int sliceId = 0;
+		for(Order slice: o.slices){
+			if(slice.sizeRemaining()>0){
+		        partiallyFilledSlice = slice;
+		        break;
+            }
+            sliceId++;
+        }
+        if(partiallyFilledSlice==null){
+            sliceId=o.newSlice(sliceSize);
+            Order slice=o.slices.get(sliceId);
+            internalCross(id,slice);
+            int sizeRemaining=o.slices.get(sliceId).sizeRemaining();
+            if(sizeRemaining>0){
+                routeOrder(id,sliceId,sizeRemaining,slice);
+            }
+        }
+        else{
+            int sizeRemaining = partiallyFilledSlice.sizeRemaining();
+            routeOrder(id,sliceId, sizeRemaining,partiallyFilledSlice);
+        }
+
 	}
 	private void internalCross(int id, Order o) throws IOException{
 		for(Map.Entry<Integer, Order>entry:orders.entrySet()){
@@ -222,15 +245,20 @@ public class OrderManager {
 
 	}
 	private void newFill(int id,int sliceId,int size,double price) throws IOException{
-		Order o=orders.get(id);
-		o.slices.get(sliceId).createFill(size, price);
-		System.out.println("(OrderManager) Size of fill: "+size);
-		if(o.sizeRemaining()==0){
-			Database.write(o);
-			//Final Fill Tell Client order has been filled/completed
+			Order o=orders.get(id);
+			int sizeOfFill = size;
+			int sizeOfSlice = o.slices.get(sliceId).sizeRemaining();
+			if(size > sizeOfSlice){
+				sizeOfFill =sizeOfSlice;
+			}
+			o.slices.get(sliceId).createFill(sizeOfFill, price);
+//		System.out.println("(OrderManager) Size of fill: "+sizeOfFill);
+			if(o.sizeRemaining()==0){
+				Database.write(o);
+				//Final Fill Tell Client order has been filled/completed
+			}
+			sendOrderToTrader(id, o, TradeScreen.orderRequest.fill);
 		}
-		sendOrderToTrader(id, o, TradeScreen.orderRequest.fill);
-	}
 	private void routeOrder(int id,int sliceId,int size,Order order) throws IOException{
 		for(Socket r:orderRouters){
 			ObjectOutputStream os=new ObjectOutputStream(r.getOutputStream());
@@ -263,7 +291,7 @@ public class OrderManager {
 		os.writeInt(sliceId);
 		os.writeInt(o.sizeRemaining());
 		os.writeObject(o.instrument);
-		System.out.println("ReallyRouteOrder in OrderManager");
+//		System.out.println("ReallyRouteOrder in OrderManager");
 		os.flush();
 	}
 	private void sendCancel(Order order,Router orderRouter){

@@ -18,6 +18,7 @@ public class SampleClient extends Mock implements Client {
     enum methods {newOrderSingleAcknowledgement, dontKnow}
 
     private static final Random RANDOM_NUM_GENERATOR = new Random();
+    private boolean orderOpen=true;
     private static final Instrument[] INSTRUMENTS = {
             new Instrument(new Ric("VOD.L")),
             new Instrument(new Ric("BP.L")),
@@ -87,7 +88,10 @@ public class SampleClient extends Mock implements Client {
     public void fullyFilled(Order order) {
         show(" fully filled order: " + order);
         OUT_QUEUE.remove(order.clientOrderID);
-    }
+        if(OUT_QUEUE.size() == 0){
+            orderOpen =false;
+        }
+	}
 
     @Override
     public void cancelled(Order order) {
@@ -100,7 +104,7 @@ public class SampleClient extends Mock implements Client {
 
         ObjectInputStream inputStream;
         try {
-            while (true) {            // this while(true) highly unnecessary; replace with something
+            while (orderOpen) {            // this while(true) highly unnecessary; replace with something
                 //inputStream.wait(); //this throws an exception!!
 //				System.out.println("While loop value "+OrderManagerConnection.getInputStream().available());
                 while (0 < OrderManagerConnection.getInputStream().available()) {

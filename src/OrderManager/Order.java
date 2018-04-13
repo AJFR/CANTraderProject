@@ -17,6 +17,12 @@ public class Order implements Serializable{
 	public double initialMarketPrice;
 	ArrayList<Order>slices;
 	ArrayList<Fill>fills;
+	private int initialOrderSize;
+
+	public int getInitialOrderSize() {
+		return initialOrderSize;
+	}
+
 	char OrdStatus='A'; //OrdStatus is Fix 39, 'A' is 'Pending New'
 	//Status state;
 
@@ -147,6 +153,7 @@ public class Order implements Serializable{
 		this.instrument=instrument;
 		fills=new ArrayList<Fill>();
 		slices=new ArrayList<Order>();
+		initialOrderSize = size;
 	}
 
 	@Override

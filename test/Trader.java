@@ -94,8 +94,8 @@ public class Trader extends Thread implements TradeScreen {
     public void price(int id, Order o) throws InterruptedException, IOException {
         //TODO should update the trade screen
         Thread.sleep(2134);
-        System.out.println("Order ID: "+id+" Size Remaining: "+o.sizeRemaining()+" Size Filled: "+o.sizeFilled()+" Slice Size: "+o.sliceSizes());
-        int sliceSize = 1000;
+        System.out.println("Order ID: "+id);
+        int sliceSize = o.getInitialOrderSize()/10;
         if(sliceSize> orders.get(id).sizeRemaining()) {
             sliceSize = orders.get(id).sizeRemaining();
         }
@@ -107,14 +107,14 @@ public class Trader extends Thread implements TradeScreen {
     public void fill(int id, Order o) throws InterruptedException, IOException{
         System.out.println("order to string: "+o.toString());
         System.out.println("---------------");
-        System.out.println("order id:-"+id);
+        System.out.println("order id: "+id);
         System.out.println("o.sizeRemaining: "+o.sizeRemaining());
         System.out.println("o.sliceSizes: "+o.sliceSizes());
         System.out.println("o.sizeFilled: "+o.sizeFilled());
         System.out.println("---------------");
         if(o.sizeRemaining() > 0){
-            System.out.println("Size Remaining: "+o.sizeRemaining()+" Size Filled: "+o.sizeFilled()+" Slice Size: "+o.sliceSizes());
-            int sliceSize = 1000;
+//            System.out.println("Size Remaining: "+o.sizeRemaining()+" Size Filled: "+o.sizeFilled()+" Slice Size: "+o.sliceSizes());
+            int sliceSize = o.getInitialOrderSize()/10;
             if(sliceSize> o.sizeRemaining()) {
                 sliceSize = o.sizeRemaining();
             }
