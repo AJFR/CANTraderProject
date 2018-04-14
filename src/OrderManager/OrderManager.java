@@ -17,16 +17,19 @@ import OrderClient.NewOrderSingle;
 import OrderRouter.Router;
 import OrderRouter.Router.orderRequest;
 import TradeScreen.TradeScreen;
+import com.sun.org.apache.xpath.internal.operations.Or;
 
 public class OrderManager {
 
 	private static LiveMarketData liveMarketData;
-	private HashMap<Integer,Order> orders=new HashMap<Integer,Order>(); //debugger will do this line as it gives state to the object
+	private HashMap<Integer,Order> orders = new HashMap<Integer,Order>(); //debugger will do this line as it gives state to the object
 	//currently recording the number of new order messages we get. TODO why? use it for more?
 	private int id=0; //debugger will do this line as it gives state to the object
-	private Socket[] orderRouters; //debugger will skip these lines as they dissapear at compile time into 'the object'/stack
+	private Socket[] orderRouters; //debugger will skip these lines as they disappear at compile time into 'the object'/stack
 	private Socket[] clients;
 	private Socket trader;
+	private int countOrders=0;
+	private boolean ordersAreOpen = true;
 
 	private Socket connect(InetSocketAddress location) throws InterruptedException{
 		boolean connected=false;
@@ -44,6 +47,13 @@ public class OrderManager {
 		}
 		System.out.println("Failed to connect to "+location.toString());
 		return null;
+	}
+
+	private void checkOrdersOpen(){
+		if(countOrders == orders.size()){
+			ordersAreOpen = false;
+			System.out.println("No more orders. OrderManager is shutting down.");
+		}
 	}
 
 	//@param args the command line arguments
@@ -71,7 +81,7 @@ public class OrderManager {
 		Socket client,router;
 		//System.out.println("Reading input stream here "+objectInputStream.read());
 		//main loop, wait for a message, then process it
-		while(true) {
+		while( ordersAreOpen ) {
             //TODO this is pretty cpu intensive, use a more modern polling/interrupt/select approach
             //we want to use the arrayindex as the clientId, so use traditional for loop instead of foreach
             for (clientId = 0; clientId < this.clients.length; clientId++) { //check if we have data on any of the sockets
@@ -100,13 +110,14 @@ public class OrderManager {
 					switch(method){ //determine the type of message and process it
 						case "bestPrice":
 							int OrderId=objectInputStream.readInt();
+							//System.out.println("(OrderManagerConstructor.route) Order ID: "+ OrderId);
 							int SliceId=objectInputStream.readInt();
 							Order slice=orders.get(OrderId).slices.get(SliceId);
 							slice.bestPrices[routerId]=objectInputStream.readDouble();
 							slice.bestPriceCount+=1;
-							System.out.println("bestPriceCount: "+slice.bestPriceCount+" bestPriceLength: "+slice.bestPrices.length);
-							if(slice.bestPriceCount==slice.bestPrices.length-1) {	// ALEX/CASSY added the: -1 after the bestPrice.length
-								reallyRouteOrder(SliceId, slice);
+							if(slice.bestPriceCount==slice.bestPrices.length-1) {
+								// ALEX/CASSY added the: -1 after the bestPrice.length
+								reallyRouteOrder(OrderId, SliceId, slice);
 							}
 							break;
 						case "newFill":
@@ -135,17 +146,22 @@ public class OrderManager {
 						break;
 				}
 			}
+			if (orders.size() > 0){
+				checkOrdersOpen();
+			}
 		}
+
 	}
 
 	private void filledOrder(Order o) throws IOException {
 		//closing messaging sockets etc..
 
-		ObjectOutputStream objectOutputStream=new ObjectOutputStream(clients[o.clientOrderID].getOutputStream());
+		ObjectOutputStream objectOutputStream=new ObjectOutputStream(clients[o.clientid].getOutputStream());
 		objectOutputStream.writeObject("11="+o.clientOrderID+";35=Z;39=2;");
 		objectOutputStream.writeObject(o);
 		objectOutputStream.flush();
-//        try {
+		countOrders++;
+//		        try {
 //            clients[o.clientOrderID].close();
 //        } catch (IOException e) {
 //            e.printStackTrace();
@@ -153,7 +169,7 @@ public class OrderManager {
 	}
 
 	private void partiallyFilledOrder(Order o) throws IOException {
-		ObjectOutputStream objectOutputStream=new ObjectOutputStream(clients[o.clientOrderID].getOutputStream());
+		ObjectOutputStream objectOutputStream=new ObjectOutputStream(clients[o.clientid].getOutputStream());
 		objectOutputStream.writeObject("11="+o.clientOrderID+";35=Z;39=1;");
 		objectOutputStream.writeObject(o);
 		objectOutputStream.flush();
@@ -181,6 +197,7 @@ public class OrderManager {
 	}
 	public void acceptOrder(int id) throws IOException{
 		Order o=orders.get(id);
+		System.out.println("(acceptOrder) Order ID: "+id);
 		if(o.OrdStatus!='A'){ //Pending New
 			System.out.println("error accepting order that has already been accepted");
 			return;
@@ -189,7 +206,7 @@ public class OrderManager {
 		ObjectOutputStream os=new ObjectOutputStream(clients[o.clientid].getOutputStream());
 		//newOrderSingle acknowledgement
 		//ClOrdId is 11=
-		os.writeObject("11="+o.clientOrderID+";35=A;39=0");
+		os.writeObject("11="+o.clientOrderID+";35=D;39=0");
 		os.flush();
 
 		price(id,o);
@@ -246,10 +263,11 @@ public class OrderManager {
 	}
 	private void newFill(int id,int sliceId,int size,double price) throws IOException{
 			Order o=orders.get(id);
+//		System.out.println("(OrderManager.newFill) Order ID: "+id);
 			int sizeOfFill = size;
 			int sizeOfSlice = o.slices.get(sliceId).sizeRemaining();
 			if(size > sizeOfSlice){
-				sizeOfFill =sizeOfSlice;
+				sizeOfFill = sizeOfSlice;
 			}
 			o.slices.get(sliceId).createFill(sizeOfFill, price);
 //		System.out.println("(OrderManager) Size of fill: "+sizeOfFill);
@@ -275,9 +293,10 @@ public class OrderManager {
 		order.bestPrices=new double[orderRouters.length];
 		order.bestPriceCount=0;
 	}
-	private void reallyRouteOrder(int sliceId,Order o) throws IOException{
+	private synchronized void reallyRouteOrder(int orderID, int sliceId,Order o) throws IOException{
 		//TODO this assumes we are buying rather than selling
-		int minIndex=0;
+		//System.out.println("(OrderManager.reallyRouter) (Order) ID: "+o.id+" ("+orderID+")");
+		int minIndex = 0;
 		double min=o.bestPrices[0];
 		for(int i=1;i<o.bestPrices.length;i++){
 			if(min>o.bestPrices[i]){
@@ -287,7 +306,7 @@ public class OrderManager {
 		}
 		ObjectOutputStream os=new ObjectOutputStream(orderRouters[minIndex].getOutputStream());
 		os.writeObject(Router.orderRequest.routeOrder);
-		os.writeInt(o.id);
+		os.writeInt(orderID);
 		os.writeInt(sliceId);
 		os.writeInt(o.sizeRemaining());
 		os.writeObject(o.instrument);

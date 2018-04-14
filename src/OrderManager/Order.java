@@ -72,7 +72,7 @@ public class Order implements Serializable{
 
 	void cross(Order matchingOrder){
 		//pair slices first and then parent
-		System.out.println("Number of slices: "+slices.size());
+//		System.out.println("Number of slices: "+slices.size());
 
 		for(Order slice:slices){
 			if(slice.sizeRemaining()==0){

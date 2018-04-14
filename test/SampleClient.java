@@ -18,7 +18,7 @@ public class SampleClient extends Mock implements Client {
     enum methods {newOrderSingleAcknowledgement, dontKnow}
 
     private static final Random RANDOM_NUM_GENERATOR = new Random();
-    private boolean orderOpen=true;
+    private boolean orderOpen = true;
     private static final Instrument[] INSTRUMENTS = {
             new Instrument(new Ric("VOD.L")),
             new Instrument(new Ric("BP.L")),
@@ -42,7 +42,6 @@ public class SampleClient extends Mock implements Client {
     public int sendOrder(Object par0) throws IOException {
         //defining instrument with a randomNoGenerator
         int size = RANDOM_NUM_GENERATOR.nextInt(5000);
-        System.out.println("(SampleClient) Order size: " + size);
         // CASSY: renamed instid to instrumentID
         int instrumentID = RANDOM_NUM_GENERATOR.nextInt(3);
         Instrument instrument = INSTRUMENTS[RANDOM_NUM_GENERATOR.nextInt(INSTRUMENTS.length)];

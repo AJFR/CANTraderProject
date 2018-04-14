@@ -30,23 +30,14 @@ public class SampleRouter extends Thread implements Router{
 				if(objectManagerConnection.getInputStream().available()>0){
 					objectInputStream=new ObjectInputStream(objectManagerConnection.getInputStream());
 					orderRequest methodName=(orderRequest)objectInputStream.readObject();
-					System.out.println("Order Router received method call for:"+methodName);
+					System.out.println("Order Router received method call for: "+methodName);
 					switch(methodName){
 						case routeOrder:
 //							System.out.println("We are in routeOrder in SampleRouter");
 							routeOrder(objectInputStream.readInt(),objectInputStream.readInt(),objectInputStream.readInt(),(Instrument)objectInputStream.readObject());break;
 						case priceAtSize:
-							int id = objectInputStream.readInt();
-							int sliceID = objectInputStream.readInt();
-							Object instru = objectInputStream.readObject();
-							int sizeRemaining = objectInputStream.readInt();
-							int routerLocalPort = objectInputStream.readInt();
-							int routerPort = objectInputStream.readInt();
-							System.out.println("ID: "+id+" RIC: "+instru.toString()+" Router Port: "+routerPort+" and LocalPort "+routerLocalPort);
-//							priceAtSize(objectInputStream.readInt(),objectInputStream.readInt(),(Instrument)objectInputStream.readObject(),objectInputStream.readInt());break;
-							priceAtSize(id,sliceID,(Instrument) instru,sizeRemaining);
+							priceAtSize(objectInputStream.readInt(),objectInputStream.readInt(),(Instrument)objectInputStream.readObject(),objectInputStream.readInt());
 							break;
-
 					}
 				}else{
 					Thread.sleep(100);
@@ -58,14 +49,14 @@ public class SampleRouter extends Thread implements Router{
 		}
 	}
 	@Override
-	public void routeOrder(int id,int sliceId,int size,Instrument i) throws IOException, InterruptedException{ //MockI.show(""+order);
-		int fillSize=(RANDOM_NUM_GENERATOR.nextInt(size))+51;
-//		int fillSize = (int) (50+(Math.random()*(size - 50)));
-		System.out.println("(routeOrder) Size of slice: "+size+" and fillSize: "+fillSize);
+	public synchronized void routeOrder(int id,int sliceId,int size,Instrument i) throws IOException, InterruptedException{ //MockI.show(""+order);
+//		int fillSize=(RANDOM_NUM_GENERATOR.nextInt(size))+51;
+		int fillSize = (int) ((Math.random()*(size - 50)))+50;
+//		System.out.println("(SampleRouter.routeOrder) Size of slice: "+size+" and fillSize: "+fillSize+" Order ID: "+id);
 //		int fillSize=size;
 		//TODO have this similar to the market price of the instrument
 		double fillPrice=199*RANDOM_NUM_GENERATOR.nextDouble();
-		System.out.println("Fill Price: "+fillPrice);
+//		System.out.println("Fill Price: "+fillPrice);
 		Thread.sleep(42);
 		objectOutputStream=new ObjectOutputStream(objectManagerConnection.getOutputStream());
 		objectOutputStream.writeObject("newFill");
@@ -83,6 +74,7 @@ public class SampleRouter extends Thread implements Router{
 	@Override
 	public void priceAtSize(int id, int sliceId,Instrument i, int size) throws IOException{
 		objectOutputStream=new ObjectOutputStream(objectManagerConnection.getOutputStream());
+//		System.out.println("(SampleRouter.priceAtSize) Order ID: "+id);
 		objectOutputStream.writeObject("bestPrice");
 		objectOutputStream.writeInt(id);
 		objectOutputStream.writeInt(sliceId);

@@ -11,9 +11,14 @@ import OrderManager.Order;
 import TradeScreen.TradeScreen;
 
 public class Trader extends Thread implements TradeScreen {
+
     private HashMap<Integer, Order> orders = new HashMap<>();
     private static Socket orderManagerConnection;
     private int port;
+
+
+    private int countOrders = 0;
+    private boolean ordersAreOpen = true;
 
     Trader(String name, int port) {
         this.setName(name);
@@ -23,6 +28,14 @@ public class Trader extends Thread implements TradeScreen {
     ObjectInputStream objectInputStream;
     ObjectOutputStream objectOutputStream;
 
+    private void checkOrdersOpen(){
+        if(countOrders == orders.size()) {
+            ordersAreOpen = false;
+            System.out.println("No more orders. Trader is shutting down.");
+        }
+    }
+
+
     public void run() {
         //OM will connect to us
         try {
@@ -30,7 +43,7 @@ public class Trader extends Thread implements TradeScreen {
 
             //objectInputStream=new ObjectInputStream( orderManagerConnection.getInputStream());
             InputStream s = orderManagerConnection.getInputStream(); //if i try to create an objectinputstream before we have data it will block
-            while (true) {
+            while (ordersAreOpen) {
                 if (0 < s.available()) {
                     objectInputStream = new ObjectInputStream(s);  //TODO check if we need to create each time. this will block if no data, but maybe we can still try to create it once instead of repeatedly
                     orderRequest method = (orderRequest) objectInputStream.readObject();
@@ -47,7 +60,6 @@ public class Trader extends Thread implements TradeScreen {
                             objectInputStream.readObject();
                             break; //TODO
                         case fill:
-                            System.out.println("Trader asked to fill");
                             fill(objectInputStream.readInt(),(Order)objectInputStream.readObject());
                             //objectInputStream.readInt();
                             //objectInputStream.readObject();
@@ -56,6 +68,9 @@ public class Trader extends Thread implements TradeScreen {
                 } else {
                     System.out.println("Trader Waiting for data to be available - sleep 1s");
                     Thread.sleep(1000);
+                }
+                if (orders.size() > 0){
+                    checkOrdersOpen();
                 }
             }
         } catch (IOException | ClassNotFoundException | InterruptedException e) {
@@ -91,21 +106,20 @@ public class Trader extends Thread implements TradeScreen {
     }
 
     @Override
-    public void price(int id, Order o) throws InterruptedException, IOException {
+    public synchronized void price(int id, Order o) throws InterruptedException, IOException {
         //TODO should update the trade screen
-        Thread.sleep(2134);
-        System.out.println("Order ID: "+id);
+//        Thread.sleep(2134);
+        //System.out.println("(Trader.price)Order ID: "+id+" is being sliced in price");
         int sliceSize = o.getInitialOrderSize()/10;
-        if(sliceSize> orders.get(id).sizeRemaining()) {
-            sliceSize = orders.get(id).sizeRemaining();
+        if(sliceSize> o.sizeRemaining()) {
+            sliceSize = o.sizeRemaining();
         }
-        System.out.println("(Trader Price) Slice Size: " + sliceSize);
         sliceOrder(id, sliceSize);
 //        sliceOrder(id, orders.get(id).sizeRemaining()/4);
     }
 
     public void fill(int id, Order o) throws InterruptedException, IOException{
-        System.out.println("order to string: "+o.toString());
+        System.out.println(o.toString());
         System.out.println("---------------");
         System.out.println("order id: "+id);
         System.out.println("o.sizeRemaining: "+o.sizeRemaining());
@@ -114,12 +128,7 @@ public class Trader extends Thread implements TradeScreen {
         System.out.println("---------------");
         if(o.sizeRemaining() > 0){
 //            System.out.println("Size Remaining: "+o.sizeRemaining()+" Size Filled: "+o.sizeFilled()+" Slice Size: "+o.sliceSizes());
-            int sliceSize = o.getInitialOrderSize()/10;
-            if(sliceSize> o.sizeRemaining()) {
-                sliceSize = o.sizeRemaining();
-            }
-            System.out.println("(Trader Fill) Slice Size: " + sliceSize);
-            sliceOrder(id,sliceSize);
+            price(id,o);
 //            sliceOrder(id,orders.get(id).sizeRemaining()); //the order of this may provide problems, move to bottom of method?
             objectOutputStream = new ObjectOutputStream(orderManagerConnection.getOutputStream());
             objectOutputStream.writeObject("partiallyFilledOrder");
@@ -130,6 +139,8 @@ public class Trader extends Thread implements TradeScreen {
             objectOutputStream.writeObject("filledOrder");
             objectOutputStream.writeObject(o);
             objectOutputStream.flush();
+            countOrders++;
+
         }
     }
 }
